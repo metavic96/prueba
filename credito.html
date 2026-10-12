@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cupo P2P</title>
+<style>
+  :root{
+    --bg:#0b0e11; --card:#1e2329; --line:#2b3139; --text:#eaecef; --muted:#848e9c;
+    --yellow:#fcd535; --green:#2ebd85; --red:#f6465d; --orange:#f0a93b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:16px;margin:0 0 12px}
+  .sub{color:var(--muted);margin:0 0 24px}
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+  .stack{display:grid;gap:16px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:520px){.kpis{grid-template-columns:1fr}}
+  .kpi{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px}
+  .kpi small{color:var(--muted);display:block}
+  .kpi b{font-size:22px;color:var(--yellow)}
+  .bar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:8px}
+  .bar i{display:block;height:100%;background:var(--yellow);transition:width .3s}
+  ul.checks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  ul.checks li{display:flex;gap:10px;align-items:flex-start}
+  .dot{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#000}
+  .ok{background:var(--green)} .no{background:var(--red)}
+  .why{color:var(--muted);font-size:13px}
+  label{display:block;color:var(--muted);font-size:13px;margin:12px 0 4px}
+  input[type=range]{width:100%;accent-color:var(--yellow)}
+  select,input[type=number]{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border:0}
+  .row span:first-child{color:var(--muted)}
+  button{background:var(--yellow);color:#000;border:0;border-radius:6px;padding:11px 16px;font-weight:600;cursor:pointer;width:100%;margin-top:14px;font-size:15px}
+  button:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  .tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600}
+  .t-ok{background:rgba(46,189,133,.15);color:var(--green)}
+  .t-warn{background:rgba(240,169,59,.15);color:var(--orange)}
+  .t-bad{background:rgba(246,70,93,.15);color:var(--red)}
+  .msg{margin-top:12px;padding:10px 12px;border-radius:6px;font-size:14px;display:none}
+  .msg.show{display:block}
+  .msg.good{background:rgba(46,189,133,.12);color:var(--green)}
+  .msg.bad{background:rgba(246,70,93,.12);color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500}
+  .demo{border-style:dashed}
+  .demo h2{color:var(--yellow)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chk{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--text);font-size:14px}
+  .chk input{accent-color:var(--yellow)}
+  .note{color:var(--muted);font-size:12px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cupo P2P</h1>
+  <p class="sub">Crédito sin interés para suscriptores. Tu cupo crece con tu plan, tu historial y tus pagos a tiempo.</p>
+
+  <div class="grid">
+    <div class="stack">
+
+      <!-- RESUMEN -->
+      <div class="card">
+        <h2>Tu cupo</h2>
+        <div class="kpis">
+          <div class="kpi"><small>Cupo disponible</small><b id="kCupo">$0</b></div>
+          <div class="kpi"><small>Score</small><b id="kScore">0</b>/100</div>
+          <div class="kpi"><small>Estado</small><span id="kEstado" class="tag t-warn">-</span></div>
+        </div>
+        <div class="bar"><i id="barScore" style="width:0"></i></div>
+        <p class="why" id="cupoExplica"></p>
+      </div>
+
+      <!-- REQUISITOS -->
+      <div class="card">
+        <h2>Requisitos para pedir crédito</h2>
+        <ul class="checks" id="checks"></ul>
+      </div>
+
+      <!-- SOLICITUD / PRÉSTAMO ACTIVO -->
+      <div class="card" id="boxSolicitud">
+        <h2>Solicitar crédito</h2>
+        <label for="monto">Monto: <b id="montoVal">$0</b></label>
+        <input type="range" id="monto" min="0" max="0" step="5" value="0">
+        <label for="plazo">Plazo</label>
+        <select id="plazo">
+          <option value="3">3 días</option>
+          <option value="7" selected>7 días</option>
+          <option value="15">15 días</option>
+        </select>
+        <div style="margin-top:12px">
+          <div class="row"><span>Interés</span><span>0 %</span></div>
+          <div class="row"><span>Comisión de apertura</span><span id="fee">$0.00</span></div>
+          <div class="row"><span>Total a pagar</span><span id="total">$0.00</span></div>
+          <div class="row"><span>Vence el</span><span id="vence">-</span></div>
+        </div>
+        <button id="btnPedir" disabled>Solicitar</button>
+        <div class="msg" id="msgSol"></div>
+      </div>
+
+      <div class="card" id="boxActivo" style="display:none">
+        <h2>Préstamo activo</h2>
+        <div id="activoInfo"></div>
+        <button id="btnPagar">Registrar pago</button>
+        <div class="msg" id="msgAct"></div>
+      </div>
+
+      <!-- HISTORIAL -->
+      <div class="card">
+        <h2>Historial</h2>
+        <table>
+          <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th></tr></thead>
+          <tbody id="historial"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANEL DE DEMO -->
+    <div class="stack">
+      <div class="card demo">
+        <h2>Panel de prueba</h2>
+        <p class="why">Cambia los datos del usuario para ver cómo reacciona la lógica. En tu página real estos datos vienen de la base de datos.</p>
+        <label for="plan">Plan</label>
+        <select id="plan">
+          <option value="gratis">Gratis</option>
+          <option value="basico">Básico</option>
+          <option value="medio" selected>Medio</option>
+          <option value="plus">Plus</option>
+          <option value="mentoria">Mentoría</option>
+        </select>
+        <div class="two">
+          <div><label for="meses">Meses pagando</label><input type="number" id="meses" min="0" max="60" value="4"></div>
+          <div><label for="volumen">Volumen mensual (libro)</label><input type="number" id="volumen" min="0" step="100" value="2000"></div>
+        </div>
+        <div class="two">
+          <div><label for="reportes">Reportes en contra</label><input type="number" id="reportes" min="0" value="0"></div>
+          <div><label for="pagados">Préstamos pagados a tiempo</label><input type="number" id="pagados" min="0" value="0"></div>
+        </div>
+        <div class="two">
+          <div><label for="tarde">Préstamos pagados tarde</label><input type="number" id="tarde" min="0" value="0"></div>
+          <div><label for="diasSim">Simular días</label><input type="number" id="diasSim" min="0" value="0"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="cedula" checked> Cédula verificada</label>
+        <label class="chk"><input type="checkbox" id="suscActiva" checked> Suscripción al día</label>
+        <button class="ghost" id="btnAvanzar">Avanzar los días simulados</button>
+        <button class="ghost" id="btnReset">Reiniciar demo</button>
+      </div>
+
+      <div class="card">
+        <h2>Reglas</h2>
+        <ul class="checks why">
+          <li>Score = meses pagando (30) + puntualidad (20) + volumen (25) + cédula (15) + sin reportes (10).</li>
+          <li>Cupo = tope del plan × factor del score, y sube $10 por cada préstamo pagado a tiempo.</li>
+          <li>Score menor a 40: sin crédito. 40 a 59: 50 % del cupo. 60 a 79: 75 %. 80 o más: 100 %.</li>
+          <li>Si te atrasas, se congela el cupo y se bloquea cancelar el plan hasta liquidar.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ CONFIGURACIÓN (edita aquí) ============ */
+const CONFIG = {
+  planes: {
+    gratis:   { nombre: "Gratis",   orden: 0, tope: 0   },
+    basico:   { nombre: "Básico",   orden: 1, tope: 50  },
+    medio:    { nombre: "Medio",    orden: 2, tope: 100 },
+    plus:     { nombre: "Plus",     orden: 3, tope: 200 },
+    mentoria: { nombre: "Mentoría", orden: 4, tope: 400 }
+  },
+  planMinimo: "basico",
+  mesesMinimos: 3,
+  bonoPorPrestamoAtiempo: 10,
+  comisionApertura: 1,        // dólares fijos por préstamo, 0 = gratis
+  volumenTopeScore: 5000,
+  scoreMinimo: 40
+};
+
+/* ============ ESTADO ============ */
+const KEY = "cupo_p2p_demo_v1";
+const inicial = { prestamo: null, historial: [], hoy: 0 };
+let S = cargar();
+
+function cargar(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) return Object.assign({}, inicial, JSON.parse(raw)); }catch(e){}
+  return JSON.parse(JSON.stringify(inicial));
+}
+function guardar(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+const $ = id => document.getElementById(id);
+const usd = n => "$" + Number(n).toFixed(n % 1 ? 2 : 0);
+
+/* ============ LÓGICA ============ */
+function usuario(){
+  return {
+    plan: $("plan").value,
+    meses: +$("meses").value || 0,
+    volumen: +$("volumen").value || 0,
+    reportes: +$("reportes").value || 0,
+    pagados: +$("pagados").value || 0,
+    tarde: +$("tarde").value || 0,
+    cedula: $("cedula").checked,
+    suscActiva: $("suscActiva").checked
+  };
+}
+
+function calcularScore(u){
+  const total = u.pagados + u.tarde;
+  const puntosMeses = Math.min(u.meses, 12) / 12 * 30;
+  const puntosPuntual = total ? (u.pagados / total) * 20 : 10;          // sin historial: 10 de 20
+  const tieneLibro = CONFIG.planes[u.plan].orden >= CONFIG.planes.medio.orden;
+  const puntosVolumen = tieneLibro ? Math.min(u.volumen, CONFIG.volumenTopeScore) / CONFIG.volumenTopeScore * 25 : 0;
+  const puntosCedula = u.cedula ? 15 : 0;
+  const puntosLimpio = u.reportes === 0 ? 10 : 0;
+  return Math.round(puntosMeses + puntosPuntual + puntosVolumen + puntosCedula + puntosLimpio);
+}
+
+function factorScore(score){
+  if (score >= 80) return 1;
+  if (score >= 60) return 0.75;
+  if (score >= CONFIG.scoreMinimo) return 0.5;
+  return 0;
+}
+
+function enMora(){
+  const p = S.prestamo;
+  return !!p && S.hoy > p.vence;
+}
+
+function evaluar(u){
+  const score = calcularScore(u);
+  const plan = CONFIG.planes[u.plan];
+  const conPrestamo = !!S.prestamo;
+  const mora = enMora();
+
+  const reqs = [
+    { ok: plan.orden >= CONFIG.planes[CONFIG.planMinimo].orden, texto: "Plan Básico o superior", falta: "Sube a un plan de pago" },
+    { ok: u.suscActiva, texto: "Suscripción al día", falta: "Renueva tu suscripción" },
+    { ok: u.meses >= CONFIG.mesesMinimos, texto: `Al menos ${CONFIG.mesesMinimos} meses pagando`, falta: `Llevas ${u.meses}, faltan ${Math.max(0, CONFIG.mesesMinimos - u.meses)}` },
+    { ok: u.cedula, texto: "Cédula verificada", falta: "Verifica tu identidad" },
+    { ok: u.reportes === 0, texto: "Sin reportes en la base de estafadores", falta: "Tienes reportes en contra" },
+    { ok: !mora, texto: "Sin deudas vencidas", falta: "Tienes un préstamo vencido" },
+    { ok: !conPrestamo, texto: "Sin otro préstamo activo", falta: "Paga el préstamo actual" },
+    { ok: score >= CONFIG.scoreMinimo, texto: `Score mínimo de ${CONFIG.scoreMinimo}`, falta: `Tu score es ${score}` }
+  ];
+  const elegible = reqs.every(r => r.ok);
+
+  // cupo
+  let cupo = 0;
+  if (plan.tope > 0 && factorScore(score) > 0){
+    const base = Math.min(plan.tope, 20 + u.pagados * CONFIG.bonoPorPrestamoAtiempo);
+    cupo = Math.floor(base * factorScore(score) / 5) * 5;
+  }
+  if (mora) cupo = 0;                       // congelado
+  if (conPrestamo) cupo = Math.max(0, cupo - S.prestamo.monto);   // lo que queda libre
+
+  return { score, reqs, elegible, cupo, mora, plan };
+}
+
+/* ============ PINTAR ============ */
+function pintar(){
+  const u = usuario();
+  const e = evaluar(u);
+
+  $("kCupo").textContent = usd(e.cupo);
+  $("kScore").textContent = e.score;
+  $("barScore").style.width = e.score + "%";
+
+  const est = $("kEstado");
+  if (e.mora){ est.textContent = "En mora"; est.className = "tag t-bad"; }
+  else if (S.prestamo){ est.textContent = "Préstamo activo"; est.className = "tag t-warn"; }
+  else if (e.elegible){ est.textContent = "Habilitado"; est.className = "tag t-ok"; }
+  else { est.textContent = "No habilitado"; est.className = "tag t-bad"; }
+
+  $("cupoExplica").textContent = e.mora
+    ? "Tu cupo está congelado hasta que liquides el préstamo vencido."
+    : `Plan ${e.plan.nombre}: tope ${usd(e.plan.tope)}. Factor por score: ${Math.round(factorScore(e.score) * 100)} %.`;
+
+  $("checks").innerHTML = e.reqs.map(r =>
+    `<li><span class="dot ${r.ok ? "ok" : "no"}">${r.ok ? "✓" : "✕"}</span>
+     <div>${r.texto}${r.ok ? "" : `<div class="why">${r.falta}</div>`}</div></li>`).join("");
+
+  // solicitud
+  const monto = $("monto");
+  monto.max = e.cupo;
+  if (+monto.value > e.cupo) monto.value = e.cupo;
+  if (+monto.value === 0 && e.cupo >= 5) monto.value = Math.min(e.cupo, 20);
+  actualizarResumen(e);
+
+  $("boxSolicitud").style.display = S.prestamo ? "none" : "block";
+  $("btnPedir").disabled = !(e.elegible && +monto.value >= 5);
+
+  // activo
+  $("boxActivo").style.display = S.prestamo ? "block" : "none";
+  if (S.prestamo){
+    const p = S.prestamo;
+    const dias = p.vence - S.hoy;
+    $("activoInfo").innerHTML =
+      `<div class="row"><span>Monto</span><span>${usd(p.monto)}</span></div>
+       <div class="row"><span>Comisión</span><span>${usd(p.fee)}</span></div>
+       <div class="row"><span>Total a pagar</span><span><b>${usd(p.monto + p.fee)}</b></span></div>
+       <div class="row"><span>Vence</span><span>${fechaDe(p.vence)}</span></div>
+       <div class="row"><span>Estado</span><span class="tag ${dias < 0 ? "t-bad" : dias <= 2 ? "t-warn" : "t-ok"}">${
+         dias < 0 ? `Vencido hace ${-dias} día(s)` : dias === 0 ? "Vence hoy" : `Faltan ${dias} día(s)`}</span></div>`;
+  }
+
+  // historial
+  $("historial").innerHTML = S.historial.length
+    ? S.historial.slice().reverse().map(h =>
+        `<tr><td>${fechaDe(h.fecha)}</td><td>${usd(h.monto)}</td>
+         <td><span class="tag ${h.estado === "A tiempo" ? "t-ok" : "t-bad"}">${h.estado}</span></td></tr>`).join("")
+    : `<tr><td colspan="3" class="why">Aún no tienes préstamos.</td></tr>`;
+}
+
+function fechaDe(diaSim){
+  const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + diaSim);
+  return d.toLocaleDateString("es", { day:"2-digit", month:"short" });
+}
+
+function actualizarResumen(e){
+  const monto = +$("monto").value;
+  const plazo = +$("plazo").value;
+  const fee = monto > 0 ? CONFIG.comisionApertura : 0;
+  $("montoVal").textContent = usd(monto);
+  $("fee").textContent = usd(fee);
+  $("total").textContent = usd(monto + fee);
+  $("vence").textContent = monto > 0 ? fechaDe(S.hoy + plazo) : "-";
+}
+
+function aviso(id, texto, tipo){
+  const el = $(id); el.textContent = texto; el.className = "msg show " + tipo;
+}
+
+/* ============ ACCIONES ============ */
+$("btnPedir").onclick = () => {
+  const u = usuario(), e = evaluar(u);
+  const monto = +$("monto").value;
+  if (!e.elegible) return aviso("msgSol", "No cumples los requisitos.", "bad");
+  if (monto > e.cupo) return aviso("msgSol", "El monto supera tu cupo.", "bad");
+  const plazo = +$("plazo").value;
+  S.prestamo = { monto, fee: CONFIG.comisionApertura, inicio: S.hoy, vence: S.hoy + plazo };
+  guardar(); pintar();
+  aviso("msgAct", `Crédito aprobado: ${usd(monto)}. Debes pagar ${usd(monto + CONFIG.comisionApertura)} antes de la fecha de vencimiento.`, "good");
+};
+
+$("btnPagar").onclick = () => {
+  const p = S.prestamo; if (!p) return;
+  const atiempo = S.hoy <= p.vence;
+  S.historial.push({ fecha: p.inicio, monto: p.monto, estado: atiempo ? "A tiempo" : "Tarde" });
+  // en la página real esto se guarda en la base de datos; aquí actualizamos el panel
+  const campo = $(atiempo ? "pagados" : "tarde");
+  campo.value = (+campo.value || 0) + 1;
+  S.prestamo = null;
+  guardar(); pintar();
+};
+
+$("btnAvanzar").onclick = () => {
+  S.hoy += +$("diasSim").value || 0;
+  guardar(); pintar();
+};
+
+$("btnReset").onclick = () => {
+  S = JSON.parse(JSON.stringify(inicial));
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  ["meses","volumen","reportes","pagados","tarde","diasSim"].forEach((id,i) => $(id).value = [4,2000,0,0,0,0][i]);
+  $("plan").value = "medio"; $("cedula").checked = true; $("suscActiva").checked = true;
+  $("monto").value = 0;
+  $("msgSol").className = "msg"; $("msgAct").className = "msg";
+  pintar();
+};
+
+["plan","meses","volumen","reportes","pagados","tarde","cedula","suscActiva","plazo"].forEach(id => {
+  $(id).addEventListener("input", pintar);
+  $(id).addEventListener("change", pintar);
+});
+$("monto").addEventListener("input", () => { actualizarResumen(); pintar(); });
+
+pintar();
+</script>
+</body>
+</html>
